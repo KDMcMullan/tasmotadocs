@@ -34,8 +34,8 @@ Time to create your template.
 3. Configure the components assigned to the [**GPIOs**](#gpio) to match your device. If you do not know what pins your device uses, read about the [new device configuration procedure](Configuration-Procedure-for-New-Devices) to determine the correct pin assignments.
 ![GPIO configuration](_media/template5.png)
  
-    - Any unused GPIO that has cannot have a peripheral connected should be set to `None` (0). In our example the device has no exposed GPIO's so the unused ones are set to `0` compared to the original BlitzWolf module.     
-    - GPIOs that can have peripherals connected to (exposed GPIOs) should be set to `User` (1). This allows future configuration through the **Configure Module** dialog without the need to create a new template.  
+    - Any unused GPIO that cannot have a peripheral connected should be set to `None` (0). In our example the device has no exposed GPIO's so the unused ones are set to `0` compared to the original BlitzWolf module.     
+    - GPIOs that can have peripherals connected (exposed GPIOs) should be set to `User` (1). This allows future configuration through the **Configure Module** dialog without the need to create a new template.  
    
     !!! example 
         Sonoff TH has a jack connected to GPIO4 that allows a user to plug in a sensor. Assigning GPIO4 as `User` allows a Template to have correct GPIOs for this device even if nothing is plugged in. But, when a user decides to connect a sensor using the jack, GPIO4 can be set to the type of sensor through the Configure Module page.
