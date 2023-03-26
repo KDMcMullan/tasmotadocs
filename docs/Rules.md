@@ -42,7 +42,7 @@ Rule<x> ON <trigger1> DO <command> ENDON ON <trigger2> DO <command> ENDON ...
 Spaces after `ON`, around `DO`, and before `ENDON` or `BREAK` are mandatory. A rule is **not** case sensitive.  
 
 ### Rule Trigger
-Rule trigger names are derived from the JSON message displayed in the console. Each JSON level (all values enclosed in `{...}`) is separated in the trigger with a `#`.
+Rule trigger names are derived from the JSON message displayed in the console. Each JSON level (all values enclosed in `{...}`) is separated in the trigger with a `#`. Top level JSON fields are referenced without any `#`, except when the JSON has only one field, where you need `#Data`.
 
 A rule trigger can consist of:  
 
@@ -53,6 +53,8 @@ A rule trigger can consist of:
 - `Tele-[SensorName]#[ValueName]`
 - `[TriggerName1]#[TriggerName2]#[ValueName]`
 - `[TriggerName1]#?#[ValueName]`
+- `[ValueName]`
+- `[ValueName#Data]`
 
 Use `?` as a wildcard for a single trigger level. Rule will trigger on `[TriggerName]#?#[Value]` where `?` is any value.
 
@@ -1882,7 +1884,7 @@ Rule1
   ON system#boot do Var1 3 ENDON
   ON Var1#State>1439 DO Var1 1439 ENDON
 
-  ON Time#Minute|%var1% DO backlog WebQuery http:/192.168.1.10/ GET ENDON
+  ON Time#Minute|%var1% DO backlog WebQuery http://192.168.1.10/ GET ENDON
   ON WebQuery#Data$!Done DO backlog Mult1 3; Power1 0; Delay 10; Power1 1 ENDON
   ON WebQuery#Data=Done DO Var1 3 ENDON
 ```

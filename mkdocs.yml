@@ -62,6 +62,7 @@ theme:
     - navigation.tabs.sticky
     - navigation.top
     - navigation.tracking
+    - content.action.edit
 
   font:
     text: Barlow
@@ -152,6 +153,7 @@ nav:
       - BLE Gateway: Bluetooth.md
       - IR Communication: Tasmota-IR.md
       - LCD/DLP Projector Control: Projector.md
+      - Matter.md
       - Modbus-Bridge.md
       - OpenTherm: OpenTherm.md
       - RF Communication: RF-Protocol.md

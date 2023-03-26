@@ -38,7 +38,7 @@
     USE_SCRIPT_GLOBVARS | enables global variables and >G section
     USE_SML_M | enables [Smart Meter Interface](Smart-Meter-Interface)
     SML_REPLACE_VARS | enables possibility to replace the lines from the (SML) descriptor with Vars
-    USE_SML_SCRIPT_CMD | enables SML script cmds
+    NO_USE_SML_SCRIPT_CMD | disables SML script cmds
     USE_SCRIPT_I2C | enables I2C support
     USE_SCRIPT_SERIAL | enables support for serial io cmds
     USE_LVGL | enables support for LVGL
@@ -50,6 +50,7 @@
     USE_FEXTRACT | enables array extraction from database  fxt(...)  
     USE_SCRIPT_SPI | enables support for SPI interface  
     USE_DSIPLAY_DUMP | enables to show epaper screen as BMP image in >w section  
+    TS_FLOAT | may be define as double to use double precision numbers (uses double RAM memory and is slower)  
 
 !!! info "Scripting Language for Tasmota is an alternative to Tasmota [Rules](Rules). For ESP32 builds it is recommended to use [Berry](Berry)"
 
@@ -90,15 +91,15 @@ with below options script buffer size may be expanded. PVARS is size for permane
 | compression (default)| 2560 | 2560 | 50 |actual compression rate may vary |
 | #define USE_UFILESYS<br>#define UFSYS_SIZE S | S<=8192 | S<=16384 | 1536 | ESP must use 4M Flash use linker option `-Wl,-Teagle.flash.4m2m.ld` or SDCARD  <BR>ESP32 can use any linker file, size of Filesystem depends on linker file 
 | #define EEP_SCRIPT_SIZE S<br>#define USE_EEPROM<br>#define USE_24C256 | S<=8192 | S<=16384 | 1536 |for hardware eeprom only|
-| #define EEP_SCRIPT_SIZE 6200<br>#define USE_EEPROM | S=6200 | not supported | 1536 | script may be lost on OTA and serial flash, not on restart |
+| #define EEP_SCRIPT_SIZE 8192<br>#define USE_EEPROM | S=8192 | not supported | 1536 | script may be lost on OTA and serial flash, not on restart |
 
 most useful definition for larger scripts would be  
 
 ##### ESP8266
 
 with 1M flash only default compressed mode should be used (or an SDCARD)  
-a special compressed mode can enable up to 6200 chars by defining #define USE_EEPROM, #define EEP_SCRIPT_SIZE 6200  
-however this has some side effects. the script may be deleted on OTA or serial update and may have to be reinstalled  after update.  
+a special mode can be enabled for 8192 chars by defining #define USE_EEPROM, #define EEP_SCRIPT_SIZE 8192  
+however this has some side effects. the script may be deleted on firware OTA or serial update and may have to be reinstalled  after update.  
 
 with 4M Flash best mode would be     
 `#define USE_UFILESYS`     
@@ -119,21 +120,17 @@ vns = total size of name strings in bytes (may not exceed 255) or #define SCRIPT
 vmem = used heap ram by the script (psram if available)  
 smem = used script (text) memory (psram if available)  
   
-if the script init fails an error code is reported:  
--1 = too many numerical variables defined  
--2 = too many string variables defined  
--3 = too many variables in total  
+if the script init fails an error code is reported:    
 -4 = not enough memory  
 -5 = variable name length too long in total  
 -6 = too many arrays defined  
 -7 = not enough memory  
 
-you may increase the number of allowed variables with defines in user_config_override  
+number of variables is only limited by RAM. you will probably get a memory error when you define to many variables.
+you may increase the number of allowed array and the maximum string size defines in user_config_override  
 defaults and override defines:  
-Number of total variables = 50  (#define MAXVARS)  
-Number of string variables = 5  (#define MAXSVARS)  
-Number of filters (arrays) = 5 (#define MAXFILT)  
-Max string size            = 20 (override with >D size up to 48)  
+Number of filters (arrays) = 5 (override #define MAXFILT)  
+Max string size            = 20 (increase with >D size up to default default 48) (override #define SCRIPT_MAXSSIZE)     
 
 
 
@@ -160,7 +157,7 @@ see further info and download [here](https://www.dropbox.com/sh/0us18ohui4c3k82/
 _Section descriptors (e.g., `>E`) are **case sensitive**_  
 a valid script must start with >D in the first line  
 `>D ssize`   
-  `ssize` = optional max string size (default=19)  
+  `ssize` = optional max string size (default=19, max=48 unless increased with `#define SCRIPT_MAXSSIZE`)  
   define and init variables here, must be the first section, no other code allowed  
   `p:vname`   
   specifies permanent variables. The number of permanent variables is limited by Tasmota rules space (50 bytes) - numeric variables are 4 bytes; string variables are one byte longer than the length of string  
@@ -170,11 +167,13 @@ a valid script must start with >D in the first line
   specifies auto increment counters if =0 (in seconds)  
   `g:vname`   
   specifies global variable which is linked to all global variables with the same definition on all devices in the homenet.
-  when a variable is updated in one device it is instantly updated in all other devices. if a section >G exists it is executed when a variable is updated from another device (this is done via UDP-multicast, so not always reliable)  
+  when a variable is updated in one device it is instantly updated in all other devices. if a section >G exists it is executed when a variable is updated from another device (this is done via UDP-multicast, so not always reliable)
+  `I:vname`   
+  specifies an integer 32 bit variable instead of float. (limited support) integer constants must be preceeded by '#'
   `m:vname`   
    specifies a median filter variable with 5 entries (for elimination of outliers)  
   `M:vname`   
-  specifies a moving average filter variable with 8 entries (for smoothing data)  
+  specifies a moving average filter variable with 8 entries (for smoothing data, should be also used to define arrays)  
   (max 5 filters in total m+M) optional another filter length (1..127) can be given after the definition.  
   Filter vars can be accessed also in indexed mode `vname[x]` (x = `1..N`, x = `0` returns current array index pointer (may be set also), x = `-1` returns array length, x = `-2` returns array average)
   Using this filter, vars can be used as arrays, #define LARGE_ARRAYS allows for arrays up to 1000 entries  
@@ -527,7 +526,7 @@ If a Tasmota `SENSOR` or `STATUS` or `RESULT` message is not generated or a `Var
 `med(n x)` = calculates a 5 value median filter of x (2 filters possible n=0,1)  
 `int(x)` = gets the integer part of x (like floor)  
 `hn(x)` = converts x (0..255) to a hex nibble string  
-`hx(x)` = converts x (0..65535) to a hex string  
+`hx(x)` = converts x (0..4294967295, 32-bit) to a hex string  
 `hd("hstr")` = converts hex number string to a decimal number  
 `af(array index)` = converts 4 bytes of an array at index `index` to float number   
 `hf("hstr")` = converts hex float number string to a decimal number  
@@ -554,8 +553,8 @@ If a Tasmota `SENSOR` or `STATUS` or `RESULT` message is not generated or a `Var
 `s(x)` = explicit conversion from number x to string  may be preceded by precision digits e.g. s(2.2x) = use 2 digits before and after decimal point  
   
 I2C support #define USE_SCRIPT_I2C  
-`ia(AA)`, `ia2(AA)` test and set I2C device with address AA (on BUS 1 or 2), returns 1 if device is present
-`iw(aa val)` , `iw1(aa val)`, `iw2(aa val)`, `iw3(aa val) `write val to register aa (1..3 bytes)  
+`ia(AA)`, `ia2(AA)` test and set I2C device with address AA (on BUS 1 or 2), returns 1 if device is present  
+`iw(aa val)` , `iw1(aa val)`, `iw2(aa val)`, `iw3(aa val) `write val to register aa (1..3 bytes), if in aa bit 15 is set no destination register is transfered (needed for some devices), if bit 14 is set byte order is reversed  
 `ir(aa)`, `ir1(aa)`, `ir2(aa)`, `ir3(aa)` read 1..3 bytes from register aa  
   
 Serial IO support #define USE_SCRIPT_SERIAL  
@@ -581,7 +580,7 @@ SPI IO support #define `USE_SCRIPT_SPI`
 `spi(0 -1 freq)` defines a hardware SPI port with pin numbers defined by Tasmota GPIO definition with bus frequency in Mhz.  
 `spi(0 -2 freq)` defines a hardware SPI port 2 on ESP32 with pin numbers defined by Tasmota GPIO definition.  
 `spi(1 N GPIO)` sets the CS pin with index N (1..4) to pin Nr GPIO.  
-`spi(2 N ARRAY LEN S)` sends and receives an ARRAY with len values with S (1..3) (8,16,24 bits) if N==-1 cs is ignored  
+`spi(2 N ARRAY LEN S)` sends and receives an ARRAY with LEN values with S (1..3) (8,16,24 bits) if N==-1 CS is ignored. If S=4, CS is raised after each byte.
   
 `ttget(TNUM SEL)` get tasmota timer setting from timer TNUM (1 .. 16)  
 SEL:  
@@ -616,16 +615,17 @@ SEL:
   
 `knx(code value)` = sends a number value to KNX   
 
-`sml(m 0 bd)` = set SML baud rate of Meter m to bd (baud) (if defined USE_SML_SCRIPT_CMD)  
-`sml(m 1 htxt)` = send SML Hex string htxt as binary to Meter m (if defined USE_SML_SCRIPT_CMD)  
-`sml(m 2)` = reads serial data received by Meter m into string (if m<0 reads hex values, else asci values)(if defined USE_SML_SCRIPT_CMD)  
-`sml(m 3 hstr)` = inserts SML Hexstring variable hstr as binary to Meter m in Output stream e.g. for special MODBUS cmds, hstr must be a string variable NO string constant (if defined USE_SML_SCRIPT_CMD)  
-`sml[n]` = get value of SML energy register n (if defined USE_SML_SCRIPT_CMD)  
-`smls[m]` = get value of SML meter string info of meter m (if defined USE_SML_SCRIPT_CMD)  
-`smlv[n]` = get SML decode valid status of line n (1..N), returns 1 if line decoded. n=0 resets all status codes to zero (if defined USE_SML_SCRIPT_CMD)  
+`sml(m 0 bd)` = set SML baud rate of Meter m to bd (baud)  
+`sml(m 1 htxt)` = send SML Hex string htxt as binary to Meter m  
+`sml(-m 1 initstr)` = reinits serial port of Meter m, initstr: "baud:mode" e.g. "9600:8E1", currently only baud and N,E,O are evaluated.    
+`sml(m 2)` = reads serial data received by Meter m into string (if m<0 reads hex values, else asci values)
+`sml(m 3 hstr)` = inserts SML Hexstring variable hstr as binary to Meter m in Output stream e.g. for special MODBUS cmds, hstr must be a string variable NO string constant   
+`sml[n]` = get value of SML energy register n   
+`smls[m]` = get value of SML meter string info of meter m, if m < 0 gets string representation of numeric value of decode line m, this enables double number resolution.  
+`smlv[n]` = get SML decode valid status of line n (1..N), returns 1 if line decoded. n=0 resets all status codes to zero 
 `smld(m)` = call decoder of meter m  
 `smlj` = read or write variable, when 0 disables MQTT output of SML.  
-`enrg[n]` = get value of energy register n 0=total, 1..3 voltage of phase 1..3, 4..6 current of phase 1..3, 7..9 power of phase 1..3 (if defined USE_ENERGY_SENSOR)  
+`enrg[n]` = get value of energy register n 0=total, 1..3 voltage of phase 1..3, 4..6 current of phase 1..3, 7..9 power of phase 1..3, 10=start energy, 11=daily energy, 12=energy yesterday (if defined USE_ENERGY_SENSOR)  
 `gjp("host" "path")` = trigger HTTPS JSON page read as used by Tesla Powerwall (if defined SCRIPT_GET_HTTPS_JP)  
 `gwr("del" index)` = gets non JSON element from webresponse del = delimiter char or string, index = n´th element (if defined USE_WEBSEND_RESPONSE)  
 `http("url" "payload")` = does a GET or POST request on a URL (http:// is internally added)
@@ -637,12 +637,13 @@ SEL:
 `wday` = day of week  (Sunday=1,Monday=2;Tuesday=3;Wednesday=4,Thursday=5,Friday=6,Saturday=7)  
 `month` = month   
 `year` = year  
-`epoch` = epoch time (from 2019-1-1 00:00)  
+`epoch` = epoch time (from 2019-1-1 00:00:00)  
 `epoffs` = set epoch offset, (must be no longer then 2 years to fit into single float with second precision)  
 `eres` = result of >E section set this var to 1 in section >E to tell Tasmota event is handled (prevents MQTT)  
 
 The following variables are cleared after reading true:  
-`chg[var]` = true if a variables value was changed (numeric vars only)  
+`chg[var]` = true if a variables value was changed (numeric vars only)
+`diff[var]` = difference since last variable update
 `upd[var]` = true if a variable was updated  
 `boot` = true on BOOT  
 `tinit` = true on time init  
@@ -681,7 +682,7 @@ If you define a variable with the same name as a special variable that special v
 - A single percent sign must be given as `%%`  
 - Variable replacement within commands is allowed using `%varname%`. Optionally, the decimal places precision for numeric values may be specified by placing a digit (`%Nvarname%`, N = `0..9`) in front of the substitution variable (e.g., `Humidity: %3hum%%%` will output `Humidity: 43.271%`)  
 - instead of variables arbitrary calculations my be inserted by bracketing %N(formula)%  
-- Linefeed and carriage return may be defined by \n and \r  
+- Linefeed, tab and carriage return may be defined by \n, \t and \r  
 
 **Special** commands:  
 `print` or `=>print` prints to the log for debugging  
@@ -899,8 +900,7 @@ A maximum of four files may be open at a time
 e.g., allows for logging sensors to a tab delimited file and then downloading the file ([see Sensor Logging example](#sensor-logging))   
 The script itself is also stored on the file system with a default size of 8192 characters  
 
-`fr=fo("fname" m)` open file fname, mode 0=read, 1=write, 2=append (returns file reference (0-3) or -1 for error) 
-(alternatively m may be: r=read, w=write, a=append)  
+`fr=fo("fname" m)` open file fname, mode 0=read, 1=write, 2=append (returns file reference (0-3) or -1 for error (alternatively m may be: r=read, w=write, a=append). For files on SD card, filename must be preceded with / e.g. fr=fo("/fname.txt" 0)
 `res=fw("text" fr)` writes text to (the end of) file fr, returns number of bytes written  
 `res=fr(svar fr)` reads a string into svar, returns bytes read. String is read until delimiter (\\t \\n \\r) or eof  
 `fc(fr)` close file  
@@ -1120,12 +1120,51 @@ remark: the Flash illumination LED is connected to GPIO4
 ```
     
 ## Scripting Cookbook
-
-### Scripting Language Example
-
     a valid script must start with >D in the first line!  
     some samples still contain comment lines before >D. This is no longer valid!  
+        
+### simple example to start with
+    >D
+    ; in this section you may define and or preset variables, there are numbers or strings.
+    ; in contrast to rules you may choose any variable name
+    ; numeric variable
+    val1=1.234
+    ; numeric variable that is preserved after reboot or power down
+    p:val2=0
+    ; text variable
+    txt="hello world"
+        
+    >B
+    ; this section is executed durig boot or on script restart
+    print we are booting
     
+    >S
+    ; this section is executed every second
+    print one second tick
+    ; variables may be printed enclosed with % char, thus showing "hello world 1.234"
+    ; very handy for debugging
+    print %txt% %val1%
+    
+    ; check if upcounting seconds give zero result when dividing by 10
+    ; upsecs is a system defined variable that counts seconds from start
+        
+    ; you may use if then, else, endif
+    if upsecs%10==0
+    then
+        print every 10 seconds
+    endif
+        
+    ; or if {} else {}
+    if upsecs%10==0 {
+        print every 10 seconds
+    }
+
+    >R
+    ; this section is executed on restart
+    print we are restarting
+        
+       
+### Scripting Language Example
     **Actually this code is too large**. This is only meant to show some of the possibilities
 
     >D
@@ -2587,6 +2626,10 @@ start dim level = initial dimmer level after power-up or restart; max 100
     %=#wsub
       
 ### Image gallery of various Tasmota scripts  
+        
+    these are some examples of more complex scripts to show what is possible.
+    complex scripts should be edited with the external source editor as they contain lots of comments and indents.
+    i will provide the sources later.
 
 ### Internet radio  
 

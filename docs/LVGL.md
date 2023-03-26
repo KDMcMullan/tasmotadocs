@@ -4,7 +4,7 @@
 
 !!! info "This feature is included in tasmota32-lvgl.bin" 
 
-Supported version: LVGL v8.3.3, LodePNG v20201017, Freetype 2.10.4
+Supported version: LVGL v8.3.5, LodePNG v20201017, Freetype 2.10.4
 
 **LVGL** (_Light and Versatile Graphics Library_) is Tasmota's next generation display. It is powerful, lightweight and simple to use. It combines:
 
@@ -199,7 +199,7 @@ lv.start()
 
 Note: when you create an LVGL object, you need to use the `lv` module. For example, creating a label object is done with `lv.lv_label`. As a convenience, classes can also be named with a shorter name `lv.label` which is equivalent to `lv.lv_label`. The internal class name is still `lv_label`.
 
-Use `lv.montserrat_font(<size>)` to load a pre-defined montserrat font. Embedded sizes are: 10, 14, 20, 28. You can also load a font from the file-system but you need to convert them first. See: https://docs.lvgl.io/latest/en/html/overview/font.html
+Use `lv.montserrat_font(<size>)` to load a pre-defined montserrat font. Embedded sizes are: 10, 14, 20, 28. You can also load a font from the file-system but you need to convert them first. See: <https://docs.lvgl.io/latest/en/html/overview/font.html>
 
 ```python
 hres = lv.get_hor_res()       # should be 320
@@ -543,7 +543,7 @@ If the geometry is wrong, you will see the following screen and no change is don
 
 ### Measuring user inactivity
 
-LVGL has a notion of screen inactivity, i.e. how long did the user not interact with the screen. This can be use to dim the display or turn it off after a moment of inactivity (like a screen saver). The time is in milliseconds. Full doc here: https://docs.lvgl.io/8/overview/display.html#inactivity
+LVGL has a notion of screen inactivity, i.e. how long did the user not interact with the screen. This can be use to dim the display or turn it off after a moment of inactivity (like a screen saver). The time is in milliseconds. Full doc here: <https://docs.lvgl.io/8/overview/display.html#inactivity>
 
 ``` python
 # time of inactivity in ms
